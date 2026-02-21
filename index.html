@@ -1,1 +1,444 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚾ 甲子園応援歌ジェネレーター</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
 
+    :root {
+      --navy: #001f5b;
+      --dark-navy: #000d2e;
+      --gold: #FFD700;
+      --gold-dark: #C8A800;
+      --red: #CC0000;
+      --white: #FFFFFF;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic Pro', sans-serif;
+      background: var(--dark-navy);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Stars */
+    .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle var(--duration, 3s) infinite alternate;
+    }
+    @keyframes twinkle {
+      0% { opacity: 0.2; transform: scale(1); }
+      100% { opacity: 1; transform: scale(1.3); }
+    }
+
+    /* Stadium Lights */
+    .stadium-lights { position: fixed; top: 0; left: 0; width: 100%; height: 200px; z-index: 0; pointer-events: none; overflow: hidden; }
+    .light-beam {
+      position: absolute; top: -50px; width: 4px; height: 200px;
+      background: linear-gradient(180deg, rgba(255,255,220,0.6) 0%, transparent 100%);
+      animation: sway var(--sway, 4s) ease-in-out infinite alternate;
+      transform-origin: top center;
+    }
+    @keyframes sway {
+      0% { transform: rotate(-15deg); }
+      100% { transform: rotate(15deg); }
+    }
+
+    /* Header */
+    .header {
+      position: relative; z-index: 10;
+      background: linear-gradient(135deg, var(--red) 0%, #990000 100%);
+      border-bottom: 4px solid var(--gold);
+      padding: 20px; text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .header-banner {
+      display: inline-block; background: var(--gold); color: var(--navy);
+      font-size: 0.8em; font-weight: 900; letter-spacing: 4px;
+      padding: 4px 20px; margin-bottom: 10px;
+      clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+    }
+    .header h1 { font-size: clamp(1.8em, 5vw, 3em); font-weight: 900; color: var(--white); text-shadow: 3px 3px 0 rgba(0,0,0,0.5); letter-spacing: 2px; }
+    .header-subtitle { color: rgba(255,255,255,0.85); font-size: 0.95em; margin-top: 6px; letter-spacing: 1px; }
+
+    /* Main */
+    .main { position: relative; z-index: 10; max-width: 900px; margin: 0 auto; padding: 30px 20px 60px; }
+
+    /* Card */
+    .card {
+      background: rgba(0, 31, 91, 0.7);
+      backdrop-filter: blur(12px);
+      border: 2px solid rgba(255, 215, 0, 0.4);
+      border-radius: 16px; padding: 28px; margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,215,0,0.2);
+    }
+    .card-title {
+      font-size: 1.1em; font-weight: 700; color: var(--gold);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px; letter-spacing: 1px;
+    }
+    .card-title::before {
+      content: ''; display: inline-block; width: 4px; height: 1.2em;
+      background: var(--gold); border-radius: 2px;
+    }
+
+    /* Name Input */
+    .name-input {
+      width: 100%; padding: 16px 20px; font-size: 1.4em; font-weight: 700;
+      font-family: inherit; background: rgba(0,0,0,0.4);
+      border: 2px solid rgba(255,215,0,0.5); border-radius: 10px;
+      color: var(--white); outline: none; transition: all 0.3s;
+      letter-spacing: 2px; text-align: center;
+    }
+    .name-input::placeholder { color: rgba(255,255,255,0.4); font-size: 0.8em; letter-spacing: 1px; }
+    .name-input:focus {
+      border-color: var(--gold); background: rgba(0,20,80,0.6);
+      box-shadow: 0 0 0 3px rgba(255,215,0,0.2), 0 0 20px rgba(255,215,0,0.1);
+    }
+
+    /* Song Grid */
+    .song-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .song-card {
+      background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .song-card:hover { border-color: rgba(255,215,0,0.5); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+    .song-card.selected { border-color: var(--gold); background: rgba(255,215,0,0.12); box-shadow: 0 0 0 2px rgba(255,215,0,0.3), 0 6px 20px rgba(0,0,0,0.3); }
+    .song-card-check {
+      position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
+      background: var(--gold); border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 0.7em; color: var(--navy); font-weight: 900;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .song-card.selected .song-card-check { opacity: 1; }
+    .song-name { font-size: 0.95em; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+    .song-composer { font-size: 0.75em; color: rgba(255,255,255,0.55); margin-bottom: 6px; }
+    .song-desc { font-size: 0.72em; color: rgba(255,255,255,0.65); line-height: 1.4; }
+
+    /* Generate Button */
+    .btn-generate-wrap { text-align: center; margin: 8px 0; }
+    .btn-generate {
+      display: inline-flex; align-items: center; gap: 12px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+      color: var(--navy); font-family: inherit; font-size: 1.3em; font-weight: 900;
+      letter-spacing: 3px; padding: 18px 48px; border: none; border-radius: 50px;
+      cursor: pointer; transition: all 0.3s;
+      box-shadow: 0 6px 24px rgba(255,215,0,0.3), 0 2px 8px rgba(0,0,0,0.3);
+      position: relative; overflow: hidden;
+    }
+    .btn-generate:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 10px 30px rgba(255,215,0,0.4), 0 4px 12px rgba(0,0,0,0.3); }
+    .btn-generate:active { transform: translateY(0) scale(0.98); }
+    .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-icon { font-size: 1.2em; animation: pulse-icon 2s ease-in-out infinite; }
+    @keyframes pulse-icon { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+    /* Loading */
+    .loading-wrap { display: none; text-align: center; padding: 40px 20px; }
+    .loading-wrap.show { display: block; }
+    .baseball { font-size: 4em; display: inline-block; animation: spin-fly 1.5s ease-in-out infinite; }
+    @keyframes spin-fly {
+      0% { transform: rotate(0deg) translateY(0); }
+      25% { transform: rotate(90deg) translateY(-20px); }
+      50% { transform: rotate(180deg) translateY(0); }
+      75% { transform: rotate(270deg) translateY(-20px); }
+      100% { transform: rotate(360deg) translateY(0); }
+    }
+    .loading-text { margin-top: 16px; font-size: 1.1em; color: var(--gold); animation: blink 1s ease-in-out infinite; }
+    .loading-notes { font-size: 2em; margin-top: 10px; animation: notes-fly 2s ease-in-out infinite; }
+    @keyframes notes-fly { 0% { transform: translateX(-20px); opacity: 0; } 50% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(20px); opacity: 0; } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* Result */
+    .result-section { display: none; animation: slide-up 0.5s ease-out; }
+    .result-section.show { display: block; }
+    @keyframes slide-up { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
+    .result-header { text-align: center; margin-bottom: 20px; }
+    .result-title { font-size: 1.6em; font-weight: 900; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4); margin-bottom: 6px; }
+    .result-subtitle { color: rgba(255,255,255,0.7); font-size: 0.9em; }
+    .field-divider { text-align: center; margin: 20px 0; color: rgba(255,215,0,0.5); font-size: 1.2em; letter-spacing: 4px; }
+    .song-lyrics {
+      background: rgba(0,0,0,0.4); border: 1px solid rgba(255,215,0,0.3);
+      border-radius: 12px; padding: 24px 28px; font-size: 1.05em;
+      line-height: 2; white-space: pre-wrap; color: var(--white);
+      letter-spacing: 0.5px; min-height: 100px;
+    }
+    .cursor {
+      display: inline-block; width: 2px; height: 1.2em;
+      background: var(--gold); vertical-align: middle;
+      animation: cursor-blink 0.7s step-start infinite;
+    }
+    @keyframes cursor-blink { 50% { opacity: 0; } }
+    .result-actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+    .btn-action { flex: 1; min-width: 140px; padding: 12px 20px; font-family: inherit; font-size: 0.95em; font-weight: 700; border-radius: 8px; cursor: pointer; transition: all 0.25s; letter-spacing: 1px; }
+    .btn-copy { background: rgba(255,215,0,0.15); border: 2px solid var(--gold); color: var(--gold); }
+    .btn-copy:hover { background: rgba(255,215,0,0.25); transform: translateY(-2px); }
+    .btn-retry { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); color: var(--white); }
+    .btn-retry:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.5); transform: translateY(-2px); }
+
+    /* Confetti */
+    .confetti-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+    .confetti-piece { position: absolute; animation: confetti-fall var(--fall-duration, 3s) var(--delay, 0s) ease-in forwards; }
+    @keyframes confetti-fall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+    /* Error */
+    .error-msg { display: none; background: rgba(204,0,0,0.2); border: 1px solid rgba(204,0,0,0.5); border-radius: 8px; padding: 12px 16px; color: #ff8080; font-size: 0.9em; margin-top: 10px; }
+    .error-msg.show { display: block; }
+
+    /* Footer */
+    .footer { position: relative; z-index: 10; text-align: center; padding: 20px; color: rgba(255,255,255,0.3); font-size: 0.8em; border-top: 1px solid rgba(255,215,0,0.1); }
+
+    @media (max-width: 600px) {
+      .song-grid { grid-template-columns: 1fr 1fr; }
+      .btn-generate { font-size: 1.1em; padding: 16px 32px; letter-spacing: 2px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="stars" id="stars"></div>
+  <div class="stadium-lights" id="stadiumLights"></div>
+  <div class="confetti-container" id="confettiContainer"></div>
+
+  <header class="header">
+    <div class="header-banner">⚾ KOSHIEN CHEERING SONG GENERATOR ⚾</div>
+    <h1>🎺 甲子園応援歌ジェネレーター 🎺</h1>
+    <p class="header-subtitle">あなただけの応援歌を、甲子園のブラスバンドが演奏します！</p>
+  </header>
+
+  <main class="main">
+
+    <div class="card">
+      <div class="card-title">STEP 1 &nbsp;｜&nbsp; あなたの名前を入力</div>
+      <input type="text" id="nameInput" class="name-input" placeholder="例：田中 / Tanaka / たろう" maxlength="20" autocomplete="off" />
+    </div>
+
+    <div class="card">
+      <div class="card-title">STEP 2 &nbsp;｜&nbsp; 応援歌を選択</div>
+      <div class="song-grid" id="songGrid"></div>
+    </div>
+
+    <div class="btn-generate-wrap">
+      <button class="btn-generate" id="generateBtn" disabled>
+        <span class="btn-icon">⚾</span>
+        応援歌を生成する！
+        <span class="btn-icon">🎺</span>
+      </button>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="loading-wrap" id="loadingWrap">
+      <div class="baseball">⚾</div>
+      <div class="loading-notes">🎺 🥁 🎷</div>
+      <div class="loading-text">甲子園のブラスバンドが演奏中...</div>
+    </div>
+
+    <div class="result-section card" id="resultSection">
+      <div class="result-header">
+        <div class="result-title" id="resultTitle">🔥 あなたの応援歌 🔥</div>
+        <div class="result-subtitle" id="resultSubtitle"></div>
+      </div>
+      <div class="field-divider">⚾ ─────── ⚾ ─────── ⚾</div>
+      <div class="song-lyrics" id="songLyrics"></div>
+      <div class="result-actions">
+        <button class="btn-action btn-copy" onclick="copyLyrics()">📋 コピーする</button>
+        <button class="btn-action btn-retry" onclick="resetForm()">↩ もう一度つくる</button>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    Powered by Claude AI (claude-opus-4-6) &nbsp;|&nbsp; ⚾ 夢の甲子園へ ⚾
+  </footer>
+
+  <script>
+    // Stars
+    const starsEl = document.getElementById('stars');
+    for (let i = 0; i < 80; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2.5 + 0.5;
+      s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*60}%;left:${Math.random()*100}%;--duration:${Math.random()*3+2}s;animation-delay:${Math.random()*3}s;`;
+      starsEl.appendChild(s);
+    }
+
+    // Stadium Lights
+    const lightsEl = document.getElementById('stadiumLights');
+    [5,15,30,50,70,85,95].forEach(pos => {
+      const b = document.createElement('div');
+      b.className = 'light-beam';
+      b.style.cssText = `left:${pos}%;--sway:${Math.random()*2+3}s;animation-delay:${Math.random()*2}s;opacity:${Math.random()*0.3+0.2};`;
+      lightsEl.appendChild(b);
+    });
+
+    let selectedSongId = null, currentName = '', isGenerating = false;
+
+    // Load Songs
+    async function loadSongs() {
+      const res = await fetch('/api/songs');
+      const songs = await res.json();
+      const grid = document.getElementById('songGrid');
+      songs.forEach(song => {
+        const card = document.createElement('div');
+        card.className = 'song-card';
+        card.dataset.id = song.id;
+        card.innerHTML = `<div class="song-card-check">✓</div><div class="song-name">${song.name}</div><div class="song-composer">${song.composer}</div><div class="song-desc">${song.description}</div>`;
+        card.addEventListener('click', () => {
+          selectedSongId = song.id;
+          document.querySelectorAll('.song-card').forEach(c => c.classList.toggle('selected', c.dataset.id === song.id));
+          updateBtn();
+        });
+        grid.appendChild(card);
+      });
+    }
+
+    function updateBtn() {
+      document.getElementById('generateBtn').disabled = !currentName || !selectedSongId || isGenerating;
+    }
+
+    document.getElementById('nameInput').addEventListener('input', function() {
+      currentName = this.value.trim();
+      updateBtn();
+    });
+
+    document.getElementById('generateBtn').addEventListener('click', generate);
+
+    async function generate() {
+      if (!currentName || !selectedSongId || isGenerating) return;
+      isGenerating = true;
+      updateBtn();
+
+      document.getElementById('resultSection').classList.remove('show');
+      document.getElementById('errorMsg').classList.remove('show');
+      document.getElementById('songLyrics').textContent = '';
+      document.getElementById('loadingWrap').classList.add('show');
+      document.getElementById('loadingWrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      const songNameEl = document.querySelector('.song-card.selected .song-name');
+      const songDisplayName = songNameEl ? songNameEl.textContent : '';
+
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: currentName, songId: selectedSongId })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'エラーが発生しました');
+        }
+
+        document.getElementById('loadingWrap').classList.remove('show');
+        document.getElementById('resultSection').classList.add('show');
+        document.getElementById('resultTitle').textContent = `🔥 ${currentName} の応援歌 🔥`;
+        document.getElementById('resultSubtitle').textContent = `♪ ${songDisplayName} のリズムで ♪`;
+
+        const lyricsEl = document.getElementById('songLyrics');
+        lyricsEl.textContent = '';
+        const cursor = document.createElement('span');
+        cursor.className = 'cursor';
+        lyricsEl.appendChild(cursor);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '', fullText = '', scrolled = false;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            try {
+              const json = JSON.parse(data);
+              if (json.error) throw new Error(json.error);
+              if (json.text) {
+                fullText += json.text;
+                lyricsEl.textContent = fullText;
+                lyricsEl.appendChild(cursor);
+                if (!scrolled) {
+                  scrolled = true;
+                  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }
+            } catch(e) { if (e.message && !e.message.includes('JSON')) throw e; }
+          }
+        }
+
+        cursor.remove();
+        fireConfetti();
+
+      } catch (err) {
+        document.getElementById('loadingWrap').classList.remove('show');
+        const errEl = document.getElementById('errorMsg');
+        errEl.textContent = `⚠️ ${err.message}`;
+        errEl.classList.add('show');
+      } finally {
+        isGenerating = false;
+        updateBtn();
+      }
+    }
+
+    function fireConfetti() {
+      const container = document.getElementById('confettiContainer');
+      container.innerHTML = '';
+      const emojis = ['⚾','🎺','🎉','⭐','🔥','💛','🏆'];
+      const colors = ['#FFD700','#FF4444','#4488FF','#44FF88','#FF88FF','#FFFFFF'];
+      for (let i = 0; i < 60; i++) {
+        const p = document.createElement('div');
+        p.className = 'confetti-piece';
+        if (Math.random() > 0.4) {
+          p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+          p.style.fontSize = `${Math.random()*16+12}px`;
+        } else {
+          p.style.background = colors[Math.floor(Math.random() * colors.length)];
+          p.style.width = `${Math.random()*10+6}px`;
+          p.style.height = `${Math.random()*10+6}px`;
+          p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        }
+        p.style.left = `${Math.random()*100}%`;
+        p.style.setProperty('--fall-duration', `${Math.random()*2+2}s`);
+        p.style.setProperty('--delay', `${Math.random()}s`);
+        container.appendChild(p);
+      }
+      setTimeout(() => { container.innerHTML = ''; }, 5000);
+    }
+
+    function copyLyrics() {
+      const text = document.getElementById('songLyrics').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        btn.textContent = '✅ コピーしました！';
+        setTimeout(() => { btn.textContent = '📋 コピーする'; }, 2000);
+      });
+    }
+
+    function resetForm() {
+      document.getElementById('resultSection').classList.remove('show');
+      document.getElementById('errorMsg').classList.remove('show');
+      document.getElementById('nameInput').value = '';
+      currentName = ''; selectedSongId = null;
+      document.querySelectorAll('.song-card').forEach(c => c.classList.remove('selected'));
+      updateBtn();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    loadSongs();
+  </script>
+</body>
+</html>
